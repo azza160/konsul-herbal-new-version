@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use App\Models\Notification;
+use Illuminate\Support\Carbon;
 
 class PenggunaController extends Controller
 {
@@ -362,37 +363,86 @@ public function updatePassword(Request $request)
 
 public function BuatKonsultasi(Request $request){
     $request->validate([
-        'ahli_id' => ['required', 'exists:users,id'],
-        'keluhan' => ['required', 'string', 'min:10'],
+        'ahli_id' => 'required|exists:users,id',
+        'jenis' => 'required|in:konsultasi_online,konsultasi_offline',
+        'keluhan' => 'required|string|min:6',
+        'tanggal_konsultasi' => 'required_if:jenis,konsultasi_offline|nullable|date',
+        'jam_konsultasi' => 'required_if:jenis,konsultasi_offline|nullable|date_format:H:i',
     ]);
 
+    $user = Auth::user();
+    $ahli = User::findOrFail($request->ahli_id);
+
+    $activeConsultations = Konsultasi::where('pengguna_id', $user->id)
+        ->whereIn('status', ['menunggu_pembayaran', 'menunggu_konfirmasi'])
+        ->count();
+
+    if ($activeConsultations >= 3) {
+        return redirect()->back()->withErrors(['limit' => 'Anda memiliki 3 konsultasi yang belum selesai. Selesaikan terlebih dahulu.'])->withInput();
+    }
+
+    if ($request->jenis === 'konsultasi_offline') {
+        $tanggalKonsultasi = Carbon::parse($request->tanggal_konsultasi);
+        if ($tanggalKonsultasi->isPast() && !$tanggalKonsultasi->isToday()) {
+            return redirect()->back()->withErrors(['tanggal_konsultasi' => 'Tanggal konsultasi tidak boleh di masa lalu.'])->withInput();
+        }
+        if ($tanggalKonsultasi->isToday()) {
+            return redirect()->back()->withErrors(['tanggal_konsultasi' => 'Tanggal konsultasi minimal H+1 dari hari ini.'])->withInput();
+        }
+        if ($tanggalKonsultasi->diffInDays(now()) > 30) {
+            return redirect()->back()->withErrors(['tanggal_konsultasi' => 'Tanggal konsultasi tidak boleh lebih dari 30 hari ke depan.'])->withInput();
+        }
+
+        if (empty($ahli->hari_pertama_buka) || empty($ahli->hari_terakhir_buka)) {
+             return redirect()->back()->withErrors(['tanggal_konsultasi' => 'Jadwal kerja ahli belum diatur.'])->withInput();
+        }
+        $daysOfWeek = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $dayIndex = $tanggalKonsultasi->dayOfWeek;
+
+        $startIndex = array_search($ahli->hari_pertama_buka, $daysOfWeek);
+        $endIndex = array_search($ahli->hari_terakhir_buka, $daysOfWeek);
+
+        if ($startIndex === false || $endIndex === false || $dayIndex < $startIndex || $dayIndex > $endIndex) {
+            return redirect()->back()->withErrors(['tanggal_konsultasi' => "Jadwal kerja ahli adalah {$ahli->hari_pertama_buka} - {$ahli->hari_terakhir_buka}. Silakan pilih tanggal yang sesuai."])->withInput();
+        }
+
+        if (empty($ahli->jam_mulai_kerja) || empty($ahli->jam_selesai_kerja)) {
+            return redirect()->back()->withErrors(['jam_konsultasi' => 'Jam kerja ahli belum diatur.'])->withInput();
+        }
+
+        $jamKonsultasi = Carbon::parse($request->jam_konsultasi);
+        $jamMulaiKerja = Carbon::parse($ahli->jam_mulai_kerja);
+        $jamSelesaiKerja = Carbon::parse($ahli->jam_selesai_kerja);
+        $jamSelesaiKerjaMinus3Hours = $jamSelesaiKerja->copy()->subHours(3);
+
+        if (!$jamKonsultasi->between($jamMulaiKerja, $jamSelesaiKerja)) {
+            return redirect()->back()->withErrors(['jam_konsultasi' => "Jam konsultasi harus antara {$jamMulaiKerja->format('H:i')} dan {$jamSelesaiKerja->format('H:i')}."])->withInput();
+        }
+        
+        if ($jamKonsultasi->gt($jamSelesaiKerjaMinus3Hours)) {
+            return redirect()->back()->withErrors(['jam_konsultasi' => "Jam konsultasi harus setidaknya 3 jam sebelum jam selesai kerja ({$jamSelesaiKerja->format('H:i')})."])->withInput();
+        }
+    }
+    
     $konsultasi = Konsultasi::create([
-        'id' => (string) Str::uuid(),
-        'pengguna_id' => Auth::id(),
-        'ahli_id' => $request->ahli_id,
+        'pengguna_id' => $user->id,
+        'ahli_id' => $ahli->id,
         'keluhan' => $request->keluhan,
-        'status' => 'menunggu',
+        'jenis' => $request->jenis,
+        'tanggal_konsultasi' => $request->jenis === 'konsultasi_offline' ? $request->tanggal_konsultasi : null,
+        'jam_konsultasi' => $request->jenis === 'konsultasi_offline' ? $request->jam_konsultasi : null,
+        'status' => 'menunggu_pembayaran',
     ]);
 
-    // Create notification for expert
     Notification::create([
-        'user_id' => $request->ahli_id,
+        'user_id' => $ahli->id,
         'type' => 'consultation_request',
         'title' => 'Permintaan Konsultasi Baru',
-        'message' => Auth::user()->nama . ' mengirim permintaan konsultasi baru.',
+        'message' => "{$user->nama} mengirim permintaan konsultasi {$request->jenis}.",
         'related_id' => $konsultasi->id,
     ]);
 
-    // Create notification for user
-    Notification::create([
-        'user_id' => Auth::id(),
-        'type' => 'consultation_request',
-        'title' => 'Permintaan Konsultasi Terkirim',
-        'message' => 'Permintaan konsultasi berhasil dikirim. Menunggu konfirmasi dari ahli.',
-        'related_id' => $konsultasi->id,
-    ]);
-
-    return redirect()->back()->with('success', 'Konsultasi berhasil dikirim.');
+    return redirect()->back()->with('success', 'Permintaan konsultasi berhasil dikirim. Silakan lakukan pembayaran.');
 }
 
 public function getLatestMessages(Request $request)

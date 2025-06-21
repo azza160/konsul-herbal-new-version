@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,18 +15,331 @@ import {
     DollarSign,
     GraduationCap,
     MessageCircle,
-    Video
+    Video,
+    Send
 } from "lucide-react";
 import { Header } from "../../layout/header";
 import { Footer } from "../../layout/footer";
 import { useAlert } from "../../components/myalert";
 import { Breadcrumb } from "../../components/breadcrump";
-import { Head, usePage } from "@inertiajs/react";
+import { Head, usePage, useForm } from "@inertiajs/react";
 import { route } from "ziggy-js";
 import MapPicker from "../../components/ui/map-picker";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+
+function OnlineConsultationDialog({ expert, open, onOpenChange }) {
+    const [isConfirmOpen, setConfirmOpen] = useState(false);
+    const { data, setData, post, processing, errors, reset } = useForm(
+        "OnlineConsultation",
+        {
+            ahli_id: expert.id,
+            jenis: "konsultasi_online",
+            keluhan: "",
+        }
+    );
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (data.keluhan.length >= 6) {
+            setConfirmOpen(true);
+        }
+    };
+
+    const handleConfirm = () => {
+        post(route("pengguna-konsultasi"), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setConfirmOpen(false);
+                onOpenChange(false);
+                reset();
+            },
+            onError: () => {
+                setConfirmOpen(false);
+            },
+        });
+    };
+
+    useEffect(() => {
+        if (!open) {
+           setTimeout(() => reset(), 500);
+        }
+    }, [open]);
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Konsultasi Online</DialogTitle>
+                    <DialogDescription>
+                        Jelaskan keluhan Anda untuk memulai konsultasi online
+                        dengan {expert.nama}.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="keluhan-online">
+                                Topik Konsultasi
+                            </Label>
+                            <Textarea
+                                id="keluhan-online"
+                                placeholder="Jelaskan keluhan atau topik..."
+                                value={data.keluhan}
+                                onChange={(e) =>
+                                    setData("keluhan", e.target.value)
+                                }
+                                className={errors.keluhan ? "border-red-500" : ""}
+                            />
+                            {errors.keluhan && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.keluhan}
+                                </p>
+                            )}
+                        </div>
+                        <div className="bg-gray-100 p-3 rounded-md text-sm text-gray-600">
+                            <p>
+                                <strong>Prosedur Konsultasi Online:</strong>
+                            </p>
+                            <ul className="list-disc list-inside">
+                                <li>Kirim permintaan Anda.</li>
+                                <li>
+                                    Lakukan pembayaran sesuai instruksi.
+                                </li>
+                                <li>Ahli akan mengkonfirmasi jadwal.</li>
+                                <li>Konsultasi akan dilakukan via chat.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-4">
+                        <Button
+                            type="submit"
+                            disabled={data.keluhan.length < 6 || processing}
+                        >
+                            {processing ? (
+                                "Mengirim..."
+                            ) : (
+                                <>
+                                    <Send className="mr-2 h-4 w-4" /> Kirim
+                                    Permintaan
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+
+            <Dialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Konfirmasi Permintaan</DialogTitle>
+                        <DialogDescription>
+                            Anda yakin ingin mengirim permintaan konsultasi
+                            online ini?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmOpen(false)}
+                        >
+                            Batal
+                        </Button>
+                        <Button onClick={handleConfirm} disabled={processing}>
+                            {processing ? "Memproses..." : "Yakin"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </Dialog>
+    );
+}
+
+function OfflineConsultationDialog({ expert, open, onOpenChange }) {
+    const { data, setData, post, processing, errors, reset } = useForm(
+        "OfflineConsultation",
+        {
+            ahli_id: expert.id,
+            jenis: "konsultasi_offline",
+            keluhan: "",
+            tanggal_konsultasi: "",
+            jam_konsultasi: "",
+        }
+    );
+    const [isConfirmOpen, setConfirmOpen] = useState(false);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setConfirmOpen(true);
+    };
+
+    const handleConfirm = () => {
+        post(route("pengguna-konsultasi"), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setConfirmOpen(false);
+                onOpenChange(false);
+                reset();
+            },
+            onError: () => {
+                setConfirmOpen(false);
+            },
+        });
+    };
+
+    useEffect(() => {
+        if (!open) {
+            setTimeout(() => reset(), 500);
+        }
+    }, [open]);
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Konsultasi Offline</DialogTitle>
+                    <DialogDescription>
+                        Isi form untuk menjadwalkan konsultasi tatap muka dengan{" "}
+                        {expert.nama}.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="keluhan-offline">
+                                Topik Konsultasi
+                            </Label>
+                            <Textarea
+                                id="keluhan-offline"
+                                name="keluhan"
+                                placeholder="Jelaskan keluhan atau topik..."
+                                value={data.keluhan}
+                                onChange={(e) => setData("keluhan", e.target.value)}
+                                className={errors.keluhan ? "border-red-500" : ""}
+                            />
+                            {errors.keluhan && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.keluhan}
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <Label htmlFor="tanggal_konsultasi">
+                                Tanggal Konsultasi
+                            </Label>
+                            <Input
+                                id="tanggal_konsultasi"
+                                name="tanggal_konsultasi"
+                                type="date"
+                                value={data.tanggal_konsultasi}
+                                onChange={(e) => setData("tanggal_konsultasi", e.target.value)}
+                                className={
+                                    errors.tanggal_konsultasi
+                                        ? "border-red-500"
+                                        : ""
+                                }
+                            />
+                            {errors.tanggal_konsultasi && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.tanggal_konsultasi}
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <Label htmlFor="jam_konsultasi">Jam Konsultasi</Label>
+                            <Input
+                                id="jam_konsultasi"
+                                name="jam_konsultasi"
+                                type="time"
+                                value={data.jam_konsultasi}
+                                onChange={(e) => setData("jam_konsultasi", e.target.value)}
+                                className={
+                                    errors.jam_konsultasi ? "border-red-500" : ""
+                                }
+                            />
+                            {errors.jam_konsultasi && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.jam_konsultasi}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-4">
+                        <Button
+                            type="submit"
+                            disabled={
+                                data.keluhan.length < 6 ||
+                                !data.tanggal_konsultasi ||
+                                !data.jam_konsultasi ||
+                                processing
+                            }
+                        >
+                            {processing ? (
+                                "Mengirim..."
+                            ) : (
+                                <>
+                                    <Send className="mr-2 h-4 w-4" /> Kirim
+                                    Permintaan
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+
+            <Dialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Konfirmasi Permintaan</DialogTitle>
+                        <DialogDescription>
+                            Anda yakin ingin mengirim permintaan konsultasi offline
+                            ini?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmOpen(false)}
+                        >
+                            Batal
+                        </Button>
+                        <Button onClick={handleConfirm} disabled={processing}>
+                           {processing ? "Memproses..." : "Yakin"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </Dialog>
+    );
+}
 
 export default function DetailAhliHerbal() {
-    const { expert } = usePage().props;
+    const { expert, user, flash, errors } = usePage().props;
+    const { showSuccess, showError, AlertContainer } = useAlert();
+    const [isOnlineModalOpen, setOnlineModalOpen] = useState(false);
+    const [isOfflineModalOpen, setOfflineModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (flash.success) {
+            showSuccess("Berhasil", flash.success);
+        }
+        if (flash.error) {
+            showError("Gagal", flash.error);
+        }
+        if (errors.limit) {
+            showError("Gagal", errors.limit);
+        }
+    }, [flash, errors]);
 
     const breadcrumbItems = [
         { label: "Ahli Herbal", href: route("list-ahli-herbal") },
@@ -79,6 +393,7 @@ export default function DetailAhliHerbal() {
     return (
         <>
             <Head title={`Detail Ahli - ${expert.nama}`} />
+            <AlertContainer />
             <div className="flex flex-col min-h-screen bg-background">
                 <Header />
                 <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
@@ -99,6 +414,7 @@ export default function DetailAhliHerbal() {
                                             <AvatarImage
                                                 src={expert.foto || "/placeholder.svg"}
                                                 alt={expert.nama}
+                                                className="object-cover"
                                             />
                                             <AvatarFallback className="bg-white text-green-800 text-3xl font-bold">
                                                 {expert.nama.split(" ").map((n) => n[0]).join("")}
@@ -136,7 +452,7 @@ export default function DetailAhliHerbal() {
                                         {expert.lokasi ? (
                                             <div className="space-y-4">
                                                 <p className="text-gray-600">{expert.lokasi.alamat}</p>
-                                                <div className="overflow-hidden rounded-lg h-64 border">
+                                                <div className="overflow-hidden rounded-lg h-64 border relative z-0">
                                                     <MapPicker
                                                         isEditable={false}
                                                         initialPosition={{
@@ -194,12 +510,16 @@ export default function DetailAhliHerbal() {
                                     </motion.div>
                                     
                                     <motion.div variants={itemVariants} className="pt-6 space-y-3">
-                                         <Button size="lg" className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700">
-                                            <MessageCircle className="mr-2 h-5 w-5" /> Mulai Konsultasi Online
-                                        </Button>
-                                        <Button size="lg" variant="outline" className="w-full border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white">
-                                            <Video className="mr-2 h-5 w-5" /> Mulai Konsultasi Offline
-                                        </Button>
+                                        {user && user.role === 'pengguna' ? (
+                                            <>
+                                                <Button size="lg" className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700" onClick={() => setOnlineModalOpen(true)}>
+                                                    <MessageCircle className="mr-2 h-5 w-5" /> Mulai Konsultasi Online
+                                                </Button>
+                                                <Button size="lg" variant="outline" className="w-full border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white" onClick={() => setOfflineModalOpen(true)}>
+                                                    <Video className="mr-2 h-5 w-5" /> Mulai Konsultasi Offline
+                                                </Button>
+                                            </>
+                                        ) : null }
                                     </motion.div>
                                 </div>
                             </CardContent>
@@ -208,6 +528,17 @@ export default function DetailAhliHerbal() {
                 </main>
                 <Footer />
             </div>
+
+            <OnlineConsultationDialog
+                expert={expert}
+                open={isOnlineModalOpen}
+                onOpenChange={setOnlineModalOpen}
+            />
+            <OfflineConsultationDialog
+                expert={expert}
+                open={isOfflineModalOpen}
+                onOpenChange={setOfflineModalOpen}
+            />
         </>
     );
 } 
