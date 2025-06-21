@@ -48,6 +48,7 @@ Route::middleware(['auth', 'check.role:pengguna'])->group(function () {
     Route::get('/list-artikel', [PenggunaController::class, "ListArtikelShow"])->name('list-artikel');
     Route::get('/artikel/{id}', [PenggunaController::class, "DetailArtikelShow"])->name('detail-artikel');
     Route::get('/list-ahli-herbal', [PenggunaController::class, "AhliHerbalShow"])->name('list-ahli-herbal');
+    Route::get('/list-ahli-herbal/{id}', [PenggunaController::class, "DetailAhliHerbalShow"])->name('detail-ahli-herbal');
  
     Route::post('/komentar', [PenggunaController::class, 'KomentarStore'])->name('komentar.store');
     Route::get('/profile', [PenggunaController::class, "Profile"])->name('profile');

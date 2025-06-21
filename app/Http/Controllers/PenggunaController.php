@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
@@ -245,7 +246,7 @@ public function KirimPesan(Request $request)
             ->with('success', 'Pesan berhasil dikirim.')
             ->with('selected_chat', $request->consultation_id);
     } catch (\Exception $e) {
-        \Log::error('Error sending message: ' . $e->getMessage());
+        Log::error('Error sending message: ' . $e->getMessage());
         return redirect()->back()
             ->with('error', 'Gagal mengirim pesan. Silakan coba lagi.');
     }
@@ -439,7 +440,7 @@ public function editMessage(Request $request)
 
         return response()->json(['success' => true, 'message' => $message]);
     } catch (\Exception $e) {
-        \Log::error('Error editing message: ' . $e->getMessage());
+        Log::error('Error editing message: ' . $e->getMessage());
         return response()->json(['error' => 'Gagal mengedit pesan. Silakan coba lagi.'], 500);
     }
 }
@@ -468,9 +469,42 @@ public function deleteMessage(Request $request)
 
         return response()->json(['success' => true]);
     } catch (\Exception $e) {
-        \Log::error('Error deleting message: ' . $e->getMessage());
+        Log::error('Error deleting message: ' . $e->getMessage());
         return response()->json(['error' => 'Gagal menghapus pesan. Silakan coba lagi.'], 500);
     }
+}
+
+public function DetailAhliHerbalShow($id)
+{
+    $user = Auth::user();
+    $expert = User::with(['ahli', 'lokasi'])
+        ->where('role', 'ahli')
+        ->findOrFail($id);
+
+    $expertData = [
+        'id' => $expert->id,
+        'nama' => $expert->nama,
+        'email' => $expert->email,
+        'telp' => $expert->telp,
+        'foto' => $expert->foto,
+        'tgl_lahir' => $expert->tgl_lahir,
+        'jk' => $expert->jk,
+        'pengalaman' => $expert->pengalaman,
+        'harga_konsultasi_online' => $expert->harga_konsultasi_online,
+        'harga_konsultasi_offline' => $expert->harga_konsultasi_offline,
+        'jam_mulai_kerja' => $expert->jam_mulai_kerja,
+        'jam_selesai_kerja' => $expert->jam_selesai_kerja,
+        'ahli' => $expert->ahli ? [
+            'nama_spesialisasi' => $expert->ahli->nama_spesialisasi,
+            'deskripsi_spesialisasi' => $expert->ahli->deskripsi_spesialisasi,
+        ] : null,
+        'lokasi' => $expert->lokasi,
+    ];
+
+    return Inertia::render('pengguna/Detail-Ahli-Herbal', [
+        'user' => $user,
+        'expert' => $expertData,
+    ]);
 }
 
 }

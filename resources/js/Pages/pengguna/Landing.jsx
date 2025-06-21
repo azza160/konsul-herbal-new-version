@@ -52,322 +52,10 @@ import { route } from "ziggy-js";
 import { useAlert } from "../../components/myalert";
 import { useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-
-function ConsultationDialog({ expert }) {
-    const [topic, setTopic] = useState("");
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-
-        router.post(
-            route("pengguna-konsultasi"),
-            {
-                ahli_id: expert.id,
-                keluhan: topic,
-            },
-            {
-                onSuccess: () => {
-                    setTopic(""); // reset textarea kalau berhasil
-                },
-            }
-        );
-    };
-
-    return (
-        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto max-h-[85vh] p-0">
-            <div className="max-h-[85vh] overflow-y-auto">
-                {/* Header */}
-                <div className="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 p-4 sm:p-6 text-white sticky top-0 z-10">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-3 sm:mb-4">
-                            Mulai Konsultasi
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 md:gap-6">
-                        <Avatar className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 border-2 sm:border-4 border-white shadow-xl">
-                            <AvatarImage
-                                src={expert.image || "/placeholder.svg"}
-                                alt={expert.name}
-                            />
-                            <AvatarFallback className="text-lg sm:text-xl md:text-2xl font-bold bg-white text-gray-800">
-                                {expert.name
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                            </AvatarFallback>
-                        </Avatar>
-
-                        <div className="text-center sm:text-left flex-1">
-                            <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">
-                                {expert.name}
-                            </h3>
-                            <Badge
-                                variant="secondary"
-                                className="text-xs sm:text-sm md:text-base px-2 sm:px-3 md:px-4 py-1 sm:py-2 bg-white/20 text-white border-white/30 mb-2 sm:mb-3"
-                            >
-                                <GraduationCap className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-1 sm:mr-2" />
-                                {expert.specialty}
-                            </Badge>
-                            <p className="text-green-100 text-xs sm:text-sm md:text-base leading-relaxed line-clamp-2">
-                                {expert.specialty_description}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Form Content */}
-                <div className="p-4 sm:p-6 md:p-8">
-                    <form
-                        onSubmit={handleSubmit}
-                        className="space-y-4 sm:space-y-6"
-                    >
-                        <div>
-                            <Label
-                                htmlFor="topic"
-                                className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-2 sm:mb-3 block"
-                            >
-                                Topik Konsultasi
-                            </Label>
-                            <Textarea
-                                id="topic"
-                                placeholder="Jelaskan keluhan atau topik yang ingin Anda konsultasikan..."
-                                value={topic}
-                                onChange={(e) => setTopic(e.target.value)}
-                                className="min-h-[100px] sm:min-h-[120px] md:min-h-[140px] text-sm sm:text-base resize-none border-2 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-lg p-3 sm:p-4"
-                                required
-                            />
-                            <p className="text-xs sm:text-sm text-gray-500 mt-2">
-                                Berikan detail yang jelas agar ahli dapat
-                                memberikan konsultasi yang tepat
-                            </p>
-                        </div>
-
-                        <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-3 sm:p-4 md:p-6 rounded-xl border border-emerald-200">
-                            <h4 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-2 sm:mb-3 flex items-center gap-2">
-                                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-                                Informasi Konsultasi
-                            </h4>
-                            <div className="space-y-2 text-xs sm:text-sm text-gray-700">
-                                <p>
-                                    • Konsultasi akan dijadwalkan dalam 24 jam
-                                </p>
-                                <p>• Durasi konsultasi: 30-60 menit</p>
-                                <p>• Tersedia konsultasi online atau offline</p>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
-                            <Button
-                                type="submit"
-                                className="flex-1 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-sm sm:text-base md:text-lg py-2 sm:py-3 md:py-4 font-semibold"
-                                disabled={!topic.trim()}
-                            >
-                                <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                                Kirim Permintaan Konsultasi
-                            </Button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </DialogContent>
-    );
-}
-
-function ExpertDetailDialog({ expert }) {
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-        });
-    };
-
-    const getGenderText = (jk) => {
-        return jk === "laki-laki" ? "Laki-laki" : "Perempuan";
-    };
-
-    const formatExperience = (experience) => {
-        if (!experience || typeof experience !== "string") {
-            return (
-                <p className="text-gray-500 italic text-sm sm:text-base">
-                    Belum ada pengalaman yang dituliskan.
-                </p>
-            );
-        }
-
-        return experience.split("\n\n").map((paragraph, index) => (
-            <p
-                key={index}
-                className="mb-3 sm:mb-4 text-gray-700 leading-relaxed text-sm sm:text-base"
-            >
-                {paragraph}
-            </p>
-        ));
-    };
-
-    return (
-        <DialogContent className="w-[95vw] max-w-4xl mx-auto max-h-[85vh] p-0">
-            <div className="max-h-[85vh] overflow-y-auto">
-                {/* Header with gradient background */}
-                <div className="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 p-4 sm:p-6 text-white sticky top-0 z-10">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-3 sm:mb-4">
-                            Profil Ahli
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <div className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6">
-                        <div className="relative flex-shrink-0">
-                            <Avatar className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 border-2 sm:border-4 border-white shadow-2xl">
-                                <AvatarImage
-                                    src={expert.image || "/placeholder.svg"}
-                                    alt={expert.name}
-                                />
-                                <AvatarFallback className="text-lg sm:text-xl md:text-3xl font-bold bg-white text-gray-800">
-                                    {expert.name
-                                        .split(" ")
-                                        .map((n) => n[0])
-                                        .join("")}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-white rounded-full p-1 sm:p-2 shadow-lg">
-                                <Award className="w-4 h-4 sm:w-6 sm:h-6 text-emerald-600" />
-                            </div>
-                        </div>
-
-                        <div className="text-center lg:text-left flex-1">
-                            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
-                                {expert.name}
-                            </h3>
-                            <Badge
-                                variant="secondary"
-                                className="text-sm sm:text-base md:text-lg px-3 sm:px-4 py-1 sm:py-2 bg-white/20 text-white border-white/30 mb-2 sm:mb-3"
-                            >
-                                <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                                {expert.specialty}
-                            </Badge>
-                            <p className="text-green-100 text-sm sm:text-base md:text-lg leading-relaxed">
-                                {expert.specialty_description}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-4 sm:p-6 md:p-8">
-                    <div className="space-y-6 sm:space-y-8">
-                        {/* Personal Information */}
-                        <div>
-                            <h4 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                                    <User className="w-3 h-3 sm:w-5 sm:h-5 text-emerald-600" />
-                                </div>
-                                Informasi Pribadi
-                            </h4>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 rounded-xl border border-gray-200">
-                                    <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                        <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                                        <span className="text-xs sm:text-sm font-medium text-gray-600">
-                                            Jenis Kelamin
-                                        </span>
-                                    </div>
-                                    <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                                        {getGenderText(expert.jk)}
-                                    </p>
-                                </div>
-
-                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 rounded-xl border border-gray-200">
-                                    <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                                        <span className="text-xs sm:text-sm font-medium text-gray-600">
-                                            Tanggal Lahir
-                                        </span>
-                                    </div>
-                                    <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                                        {formatDate(expert.tgl_lahir)}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Contact Information */}
-                        <div>
-                            <h4 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                                    <Phone className="w-3 h-3 sm:w-5 sm:h-5 text-emerald-600" />
-                                </div>
-                                Informasi Kontak
-                            </h4>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                                <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 sm:p-6 rounded-xl border border-emerald-200">
-                                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                        <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
-                                        <span className="text-xs sm:text-sm font-medium text-emerald-700">
-                                            Email
-                                        </span>
-                                    </div>
-                                    <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 break-all">
-                                        {expert.email}
-                                    </p>
-                                </div>
-
-                                <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 sm:p-6 rounded-xl border border-emerald-200">
-                                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                        <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
-                                        <span className="text-xs sm:text-sm font-medium text-emerald-700">
-                                            Telepon
-                                        </span>
-                                    </div>
-                                    <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                                        {expert.telp}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Experience */}
-                        <div>
-                            <h4 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                                    <Briefcase className="w-3 h-3 sm:w-5 sm:h-5 text-emerald-600" />
-                                </div>
-                                Pengalaman & Perjalanan Karier
-                            </h4>
-
-                            <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 sm:p-6 rounded-xl border border-emerald-200">
-                                <div className="prose prose-sm sm:prose-base max-w-none">
-                                    {formatExperience(expert.pengalaman)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </DialogContent>
-    );
-}
 
 export default function LandingPage() {
-    const [selectedExpert, setSelectedExpert] = useState(null);
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [openFaq, setOpenFaq] = useState(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-    const openDialog = (expert) => {
-        setSelectedExpert(expert);
-        setIsDialogOpen(true);
-    };
-    const { flash, articles, experts } = usePage().props;
+    const { flash, articles, experts, user } = usePage().props;
     const { showSuccess, AlertContainer } = useAlert();
     useEffect(() => {
         if (flash.success) {
@@ -422,16 +110,6 @@ export default function LandingPage() {
             description: "Konsultasi mudah dan praktis melalui platform online",
         },
     ];
-
-    const handleStartConsultation = (expert) => {
-        setSelectedExpert(expert);
-        setShowConfirmModal(true);
-    };
-
-    const confirmConsultation = () => {
-        setShowConfirmModal(false);
-        console.log("Starting consultation with", selectedExpert.name);
-    };
 
     const toggleFaq = (faqId) => {
         setOpenFaq(openFaq === faqId ? null : faqId);
@@ -844,50 +522,21 @@ export default function LandingPage() {
 
                                             {/* Action Buttons */}
                                             <div className="flex flex-col gap-2 sm:gap-3 pt-2 sm:pt-3">
-                                                <Dialog>
-                                                    <DialogTrigger asChild>
-                                                        <motion.div
-                                                            whileHover={{
-                                                                scale: 1.02,
-                                                            }}
-                                                            whileTap={{
-                                                                scale: 0.98,
-                                                            }}
-                                                        >
-                                                            <Button className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 group-hover:shadow-xl transition-all duration-300 text-xs sm:text-sm md:text-base py-2 sm:py-3">
-                                                                <Eye className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-2" />
-                                                                Lihat Detail
-                                                            </Button>
-                                                        </motion.div>
-                                                    </DialogTrigger>
-                                                    <ExpertDetailDialog
-                                                        expert={expert}
-                                                    />
-                                                </Dialog>
-
-                                                <Dialog>
-                                                    <DialogTrigger asChild>
-                                                        <motion.div
-                                                            whileHover={{
-                                                                scale: 1.02,
-                                                            }}
-                                                            whileTap={{
-                                                                scale: 0.98,
-                                                            }}
-                                                        >
-                                                            <Button
-                                                                variant="outline"
-                                                                className="w-full border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all duration-300 text-xs sm:text-sm md:text-base py-2 sm:py-3"
-                                                            >
-                                                                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-2" />
-                                                                Mulai Konsultasi
-                                                            </Button>
-                                                        </motion.div>
-                                                    </DialogTrigger>
-                                                    <ConsultationDialog
-                                                        expert={expert}
-                                                    />
-                                                </Dialog>
+                                                 <motion.div
+                                                     whileHover={{
+                                                         scale: 1.02,
+                                                     }}
+                                                     whileTap={{
+                                                         scale: 0.98,
+                                                     }}
+                                                 >
+                                                     <Button asChild className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 group-hover:shadow-xl transition-all duration-300 text-xs sm:text-sm md:text-base py-2 sm:py-3">
+                                                         <Link href={route("detail-ahli-herbal", { id: expert.id })}>
+                                                             <Eye className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-2" />
+                                                             Lihat Detail
+                                                         </Link>
+                                                     </Button>
+                                                 </motion.div>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -1041,62 +690,6 @@ export default function LandingPage() {
                         ></motion.div>
                     </div>
                 </motion.section>
-
-                {/* Confirmation Modal */}
-                <AnimatePresence>
-                    {showConfirmModal && (
-                        <Dialog
-                            open={showConfirmModal}
-                            onOpenChange={setShowConfirmModal}
-                        >
-                            <DialogContent>
-                                <motion.div
-                                    initial={{ scale: 0.9, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0.9, opacity: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                >
-                                    <DialogHeader>
-                                        <DialogTitle>
-                                            Konfirmasi Konsultasi
-                                        </DialogTitle>
-                                        <DialogDescription>
-                                            Anda akan memulai konsultasi dengan{" "}
-                                            {selectedExpert?.name}. Jika yakin,
-                                            tekan mulai. Jika batal, tekan
-                                            batal.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                        <motion.div
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                        >
-                                            <Button
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setShowConfirmModal(false)
-                                                }
-                                            >
-                                                Batal
-                                            </Button>
-                                        </motion.div>
-                                        <motion.div
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                        >
-                                            <Button
-                                                onClick={confirmConsultation}
-                                            >
-                                                Mulai
-                                            </Button>
-                                        </motion.div>
-                                    </DialogFooter>
-                                </motion.div>
-                            </DialogContent>
-                        </Dialog>
-                    )}
-                </AnimatePresence>
 
                 <Footer />
             </div>

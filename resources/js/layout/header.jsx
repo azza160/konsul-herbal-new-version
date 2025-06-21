@@ -102,16 +102,26 @@ export function Header() {
     ];
 
     const isActive = (routeName) => {
-        // Get the current route name from the URL
-        const currentRoute = currentUrl.split('/').filter(Boolean)[0] || 'beranda';
+        const currentRouteName = route().current();
         
-        // Special case for beranda (home)
-        if (routeName === 'beranda') {
-            return currentRoute === '' || currentRoute === 'beranda';
+        if (routeName === 'list-ahli-herbal') {
+            return currentRouteName === 'list-ahli-herbal' || currentRouteName === 'detail-ahli-herbal';
         }
         
-        // For other routes, check if the current route matches
-        return currentRoute === routeName;
+        if (routeName === 'list-artikel') {
+            const articleRoutes = ['list-artikel', 'detail-artikel'];
+            return articleRoutes.includes(currentRouteName);
+        }
+
+        // Handle other routes as before
+        const currentUrlParts = currentUrl.split('/').filter(Boolean);
+        const currentBaseRoute = currentUrlParts[0] || 'beranda';
+        
+        if (routeName === 'beranda') {
+            return currentBaseRoute === 'beranda' && currentUrlParts.length <= 1;
+        }
+        
+        return currentBaseRoute === routeName;
     };
 
     const menuVariants = {
