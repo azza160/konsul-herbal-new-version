@@ -179,10 +179,15 @@ export default function ProfilePage() {
                                             <Clock className="h-5 w-5 text-green-600" />
                                             <div>
                                                 <p className="text-sm text-green-700 font-medium">
-                                                    Jam Kerja
+                                                    Jadwal Kerja
                                                 </p>
                                                 <p className="text-gray-700">
-                                                    {user.jam_mulai_kerja && user.jam_selesai_kerja ? `${user.jam_mulai_kerja.substring(0, 5)} - ${user.jam_selesai_kerja.substring(0, 5)}` : 'N/A'}
+                                                    {user.hari_pertama_buka && user.hari_terakhir_buka
+                                                        ? `${user.hari_pertama_buka} - ${user.hari_terakhir_buka}`
+                                                        : 'Hari kerja belum diatur'}
+                                                </p>
+                                                <p className="text-gray-700">
+                                                    {user.jam_mulai_kerja && user.jam_selesai_kerja ? `${user.jam_mulai_kerja.substring(0, 5)} - ${user.jam_selesai_kerja.substring(0, 5)}` : 'Jam kerja belum diatur'}
                                                 </p>
                                             </div>
                                         </div>

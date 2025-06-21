@@ -494,6 +494,8 @@ public function DetailAhliHerbalShow($id)
         'harga_konsultasi_offline' => $expert->harga_konsultasi_offline,
         'jam_mulai_kerja' => $expert->jam_mulai_kerja,
         'jam_selesai_kerja' => $expert->jam_selesai_kerja,
+        'hari_pertama_buka' => $expert->hari_pertama_buka,
+        'hari_terakhir_buka' => $expert->hari_terakhir_buka,
         'ahli' => $expert->ahli ? [
             'nama_spesialisasi' => $expert->ahli->nama_spesialisasi,
             'deskripsi_spesialisasi' => $expert->ahli->deskripsi_spesialisasi,

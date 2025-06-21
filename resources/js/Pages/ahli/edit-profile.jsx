@@ -47,6 +47,8 @@ export default function EditProfilePage() {
         harga_konsultasi_offline: user.harga_konsultasi_offline || "",
         jam_mulai_kerja: user.jam_mulai_kerja ? user.jam_mulai_kerja.substring(0, 5) : "",
         jam_selesai_kerja: user.jam_selesai_kerja ? user.jam_selesai_kerja.substring(0, 5) : "",
+        hari_pertama_buka: user.hari_pertama_buka || "",
+        hari_terakhir_buka: user.hari_terakhir_buka || "",
     });
 
     const { showSuccess, AlertContainer } = useAlert();
@@ -113,6 +115,8 @@ export default function EditProfilePage() {
         data.append("harga_konsultasi_offline", formData.harga_konsultasi_offline);
         data.append("jam_mulai_kerja", formData.jam_mulai_kerja);
         data.append("jam_selesai_kerja", formData.jam_selesai_kerja);
+        data.append("hari_pertama_buka", formData.hari_pertama_buka);
+        data.append("hari_terakhir_buka", formData.hari_terakhir_buka);
 
         if (formData.latitude && formData.longitude && formData.alamat) {
             data.append("alamat", formData.alamat);
@@ -149,6 +153,8 @@ export default function EditProfilePage() {
         hidden: { y: 20, opacity: 0 },
         visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
     };
+
+    const days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
     return (
         <>
@@ -450,6 +456,37 @@ export default function EditProfilePage() {
                                                     onChange={handleChange}
                                                     className="border-green-200 focus-visible:ring-green-500"
                                                 />
+                                            </motion.div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                            <motion.div variants={itemVariants}>
+                                                <Label htmlFor="hari_pertama_buka" className="text-green-700">
+                                                    Hari Mulai Kerja
+                                                </Label>
+                                                <select
+                                                    name="hari_pertama_buka"
+                                                    value={formData.hari_pertama_buka}
+                                                    onChange={handleChange}
+                                                    className="w-full px-3 py-2 border border-green-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-transparent"
+                                                >
+                                                    <option value="">Pilih Hari</option>
+                                                    {days.map(day => <option key={day} value={day}>{day}</option>)}
+                                                </select>
+                                            </motion.div>
+                                            <motion.div variants={itemVariants}>
+                                                <Label htmlFor="hari_terakhir_buka" className="text-green-700">
+                                                    Hari Selesai Kerja
+                                                </Label>
+                                                <select
+                                                    name="hari_terakhir_buka"
+                                                    value={formData.hari_terakhir_buka}
+                                                    onChange={handleChange}
+                                                    className="w-full px-3 py-2 border border-green-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-transparent"
+                                                >
+                                                    <option value="">Pilih Hari</option>
+                                                    {days.map(day => <option key={day} value={day}>{day}</option>)}
+                                                </select>
                                             </motion.div>
                                         </div>
 

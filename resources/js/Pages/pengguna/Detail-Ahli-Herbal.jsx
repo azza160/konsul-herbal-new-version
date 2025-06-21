@@ -178,7 +178,10 @@ export default function DetailAhliHerbal() {
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-3">
                                                 <Clock className="h-5 w-5 text-green-600" />
-                                                <span className="text-gray-700">{expert.jam_mulai_kerja && expert.jam_selesai_kerja ? `${expert.jam_mulai_kerja.substring(0, 5)} - ${expert.jam_selesai_kerja.substring(0, 5)}` : 'N/A'}</span>
+                                                <div>
+                                                    <p className="text-gray-700">{expert.hari_pertama_buka && expert.hari_terakhir_buka ? `${expert.hari_pertama_buka} - ${expert.hari_terakhir_buka}`: 'Hari kerja belum diatur'}</p>
+                                                    <p className="text-gray-700">{expert.jam_mulai_kerja && expert.jam_selesai_kerja ? `${expert.jam_mulai_kerja.substring(0, 5)} - ${expert.jam_selesai_kerja.substring(0, 5)}` : 'Jam kerja belum diatur'}</p>
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <DollarSign className="h-5 w-5 text-green-600" />

@@ -109,6 +109,8 @@ class AhliController extends Controller
             'harga_konsultasi_offline' => 'nullable|integer|min:0',
             'jam_mulai_kerja' => 'nullable|date_format:H:i',
             'jam_selesai_kerja' => 'nullable|date_format:H:i|after:jam_mulai_kerja',
+            'hari_pertama_buka' => 'nullable|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
+            'hari_terakhir_buka' => 'nullable|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
         ]);
 
         // Jika ada file baru, hapus foto lama dan simpan yang baru

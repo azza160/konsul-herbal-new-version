@@ -33,6 +33,8 @@ class User extends Authenticatable
         'harga_konsultasi_offline',
         'jam_mulai_kerja',
         'jam_selesai_kerja',
+        'hari_pertama_buka',
+        'hari_terakhir_buka',
     ];
 
     protected $hidden = [
