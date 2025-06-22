@@ -299,6 +299,7 @@ public function PesanShow()
             'expertName' => $other->nama,
             'avatar' => $other->foto ? $other->foto : '/placeholder.svg',
             'lastMessage' => $k->keluhan,
+            'status' => $k->status,
         ];
     });
 

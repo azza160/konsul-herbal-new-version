@@ -171,6 +171,7 @@ class PenggunaController extends Controller
             'expertName' => $other->nama,
             'avatar' => $other->foto ? $other->foto : '/placeholder.svg',
             'lastMessage' => $k->keluhan,
+            'status' => $k->status,
         ];
     });
 
@@ -194,7 +195,6 @@ class PenggunaController extends Controller
         'chatList' => $chatList,
         'chatMessages' => $chatMessages,
         'user' => $user,
-
     ]);
 }
 
@@ -426,7 +426,7 @@ public function BuatKonsultasi(Request $request){
             return redirect()->back()->withErrors(['jam_konsultasi' => "Jam konsultasi harus setidaknya 3 jam sebelum jam selesai kerja ({$jamSelesaiKerja->format('H:i')})."])->withInput();
         }
     }
-    
+
     $konsultasi = Konsultasi::create([
         'pengguna_id' => $user->id,
         'ahli_id' => $ahli->id,
@@ -739,6 +739,58 @@ public function UploadBuktiPembayaran(Request $request, $id)
         Log::error('Error uploading payment proof: ' . $e->getMessage());
         return redirect()->back()->with('error', 'Gagal mengunggah bukti pembayaran. Silakan coba lagi.');
     }
+}
+
+public function RiwayatKonsultasiShow()
+{
+    $user = Auth::user();
+    $konsultasis = Konsultasi::with('ahli')
+        ->where('pengguna_id', $user->id)
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($konsultasi) {
+            return [
+                'id' => $konsultasi->id,
+                'ahli_nama' => $konsultasi->ahli->nama,
+                'ahli_foto' => $konsultasi->ahli->foto,
+                'status' => $konsultasi->status,
+                'jenis' => $konsultasi->jenis,
+                'keluhan' => $konsultasi->keluhan,
+                'tanggal_konsultasi' => $konsultasi->tanggal_konsultasi,
+                'jam_konsultasi' => $konsultasi->jam_konsultasi ? substr($konsultasi->jam_konsultasi, 0, 5) : null,
+                'created_at' => $konsultasi->created_at->toDateTimeString(),
+                'updated_at' => $konsultasi->updated_at->toDateTimeString(),
+            ];
+        });
+
+    return Inertia::render('pengguna/RiwayatKonsultasi', [
+        'user' => $user,
+        'konsultasis' => $konsultasis
+    ]);
+}
+
+public function HapusKonsultasi($id)
+{
+    $user = Auth::user();
+    $konsultasi = Konsultasi::findOrFail($id);
+
+    // Authorization
+    if ($konsultasi->pengguna_id !== $user->id) {
+        abort(403, 'Unauthorized');
+    }
+
+    if ($konsultasi->status !== 'selesai' && $konsultasi->status !== 'ditolak') {
+        return redirect()->back()->with('error', 'Hanya konsultasi yang sudah selesai atau ditolak yang bisa dihapus.');
+    }
+
+    // Deleting messages associated with online consultation
+    if ($konsultasi->jenis === 'konsultasi_online') {
+        $konsultasi->messages()->delete();
+    }
+
+    $konsultasi->delete();
+
+    return redirect()->back()->with('success', 'Riwayat konsultasi berhasil dihapus.');
 }
 
 }

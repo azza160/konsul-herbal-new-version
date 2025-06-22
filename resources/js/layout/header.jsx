@@ -97,6 +97,7 @@ export function Header() {
         { label: "Beranda", href: route("beranda"), routeName: "beranda" },
         { label: "Artikel", href: route("list-artikel"), routeName: "list-artikel" },
         { label: "Ahli Herbal", href: route("list-ahli-herbal"), routeName: "list-ahli-herbal" },
+        { label: "Riwayat", href: route("riwayat-konsultasi"), routeName: "riwayat-konsultasi" },
         { label: "Pesan", href: route("pengguna-pesan"), routeName: "pengguna-pesan" },
         { label: "Profile", href: route("profile"), routeName: "profile" },
     ];
@@ -111,6 +112,11 @@ export function Header() {
         if (routeName === 'list-artikel') {
             const articleRoutes = ['list-artikel', 'detail-artikel'];
             return articleRoutes.includes(currentRouteName);
+        }
+
+        if (routeName === 'riwayat-konsultasi') {
+            const riwayatRoutes = ['riwayat-konsultasi', 'pengguna-pembayaran'];
+            return riwayatRoutes.includes(currentRouteName);
         }
 
         // Handle other routes as before

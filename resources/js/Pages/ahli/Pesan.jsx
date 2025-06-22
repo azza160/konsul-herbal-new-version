@@ -81,11 +81,33 @@ export default function ChatPage() {
 
   // Polling effect
   useEffect(() => {
-    if (selectedChat) {
+    if (selectedChat && chatList && chatList.length > 0) {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
 
+      // Initial fetch to get current messages
+      axios.get(route('ahli-pesan-latest'), {
+        params: {
+          consultation_id: selectedChat
+        }
+      })
+      .then(response => {
+        const newMessages = response.data.messages;
+        setCurrentMessages(newMessages);
+        lastMessageCountRef.current = newMessages.length;
+        
+        // Update chat messages state
+        setChatMessagesState(prev => ({
+          ...prev,
+          [selectedChat]: newMessages
+        }));
+      })
+      .catch(error => {
+        console.error('Error fetching initial messages:', error);
+      });
+
+      // Start polling
       pollingIntervalRef.current = setInterval(() => {
         axios.get(route('ahli-pesan-latest'), {
           params: {
@@ -102,6 +124,12 @@ export default function ChatPage() {
             hasNewMessagesRef.current = true;
             setCurrentMessages(newMessages);
             
+            // Update chat messages state to keep it in sync
+            setChatMessagesState(prev => ({
+              ...prev,
+              [selectedChat]: newMessages
+            }));
+            
             // Auto scroll only if we're at the bottom
             const chatContainer = chatContainerRef.current;
             if (chatContainer) {
@@ -116,6 +144,11 @@ export default function ChatPage() {
             }
           } else {
             setCurrentMessages(newMessages);
+            // Update chat messages state even if no new messages
+            setChatMessagesState(prev => ({
+              ...prev,
+              [selectedChat]: newMessages
+            }));
           }
         })
         .catch(error => {
@@ -129,7 +162,7 @@ export default function ChatPage() {
         }
       };
     }
-  }, [selectedChat]);
+  }, [selectedChat, chatList]);
 
   // Add polling for unread counts
   useEffect(() => {
@@ -176,8 +209,8 @@ export default function ChatPage() {
     }
   }, [selectedChat]);
 
-  // Filter chat list based on search query
-  const filteredChatList = chatList.filter(chat => 
+  // Safely filter chat list, providing a fallback empty array if chatList is undefined
+  const filteredChatList = (chatList || []).filter(chat => 
     chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -201,20 +234,63 @@ export default function ChatPage() {
     if (selectedImage) {
       formData.append('image', selectedImage);
     }
+
+    // Create optimistic message
+    const optimisticMessage = {
+      id: 'temp-' + Date.now(),
+      sender: 'expert',
+      sender_id: user.id,
+      content: message.trim(),
+      image: selectedImage ? URL.createObjectURL(selectedImage) : null,
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      isOptimistic: true
+    };
+
+    // Add optimistic message to current messages
+    setCurrentMessages(prev => [...prev, optimisticMessage]);
+    
+    // Update chat messages state
+    setChatMessagesState(prev => ({
+      ...prev,
+      [selectedChat]: [...(prev[selectedChat] || []), optimisticMessage]
+    }));
+
+    // Clear input immediately
+    const messageText = message.trim();
+    const imageFile = selectedImage;
+    setMessage("");
+    setSelectedImage(null);
+    if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+    }
   
     router.post(route('ahli-pesan-kirim'), formData, {
       preserveScroll: true,
       preserveState: true,
       onSuccess: () => {
-        setMessage("");
-        setSelectedImage(null);
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-        }
+        // Remove optimistic message and let polling handle the real message
+        setCurrentMessages(prev => prev.filter(msg => !msg.isOptimistic));
+        setChatMessagesState(prev => ({
+          ...prev,
+          [selectedChat]: (prev[selectedChat] || []).filter(msg => !msg.isOptimistic)
+        }));
+        
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 100);
       },
+      onError: () => {
+        // Remove optimistic message on error
+        setCurrentMessages(prev => prev.filter(msg => !msg.isOptimistic));
+        setChatMessagesState(prev => ({
+          ...prev,
+          [selectedChat]: (prev[selectedChat] || []).filter(msg => !msg.isOptimistic)
+        }));
+        
+        // Restore the message and image
+        setMessage(messageText);
+        setSelectedImage(imageFile);
+      }
     });
   };
 
@@ -230,8 +306,15 @@ export default function ChatPage() {
     lastMessageCountRef.current = 0;
     setIsLoadingMessages(true);
   
-    const messages = chatMessagesState[chatId] || chatMessages[chatId] || [];
-    setCurrentMessages(messages);
+    // Clear current messages first
+    setCurrentMessages([]);
+    
+    // Don't rely on initial chatMessages, let polling handle it
+    // const messages = chatMessagesState[chatId] || chatMessages[chatId] || [];
+    // setCurrentMessages(messages);
+    
+    // Update lastMessageCountRef to match current message count
+    // lastMessageCountRef.current = messages.length;
   
     if (isMobileView) {
       setShowChatList(false);
@@ -249,6 +332,7 @@ export default function ChatPage() {
   }
 
   const selectedChatData = chatList.find((chat) => chat.id === selectedChat)
+  const isConsultationCompleted = selectedChatData?.status === 'selesai';
 
   const handleImageLoad = (messageId) => {
     setLoadingImages(prev => ({
@@ -270,17 +354,33 @@ export default function ChatPage() {
   };
 
   const confirmDeleteMessage = () => {
+    // Optimistically remove the message from UI
+    setCurrentMessages(prev => 
+      prev.filter(msg => msg.id !== deletingMessage.id)
+    );
+    
+    // Update chat messages state
+    setChatMessagesState(prev => ({
+      ...prev,
+      [selectedChat]: (prev[selectedChat] || []).filter(msg => msg.id !== deletingMessage.id)
+    }));
+    
     axios.delete(route('ahli-pesan-delete'), {
       data: { message_id: deletingMessage.id }
     })
     .then(response => {
-      setCurrentMessages(prev => 
-        prev.filter(msg => msg.id !== deletingMessage.id)
-      );
+      // Message already removed optimistically, just clear the deleting state
       setDeletingMessage(null);
     })
     .catch(error => {
       console.error('Error deleting message:', error);
+      // Restore the message if deletion failed
+      setCurrentMessages(prev => [...prev, deletingMessage]);
+      setChatMessagesState(prev => ({
+        ...prev,
+        [selectedChat]: [...(prev[selectedChat] || []), deletingMessage]
+      }));
+      setDeletingMessage(null);
     });
   };
 
@@ -415,7 +515,7 @@ export default function ChatPage() {
                                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 </div>
                               ) : (
-                                currentMessages.map((msg, index) => (
+                                currentMessages && currentMessages.map((msg, index) => (
                                   <motion.div
                                     key={msg.id}
                                     initial={{ opacity: 0, y: 20 }}
@@ -506,37 +606,50 @@ export default function ChatPage() {
 
                             {/* Message Input */}
                             <div className="border-t p-3 sm:p-4 bg-background w-full">
-                              <form onSubmit={handleSendMessage} className="flex items-end space-x-2 w-full">
-                                <Textarea
-                                  ref={textareaRef}
-                                  placeholder="Ketik pesan..."
-                                  value={message}
-                                  onChange={(e) => setMessage(e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  className="flex-1 min-w-0 resize-none overflow-y-hidden"
-                                  rows={1}
-                                />
-                                <input
-                                  type="file"
-                                  ref={fileInputRef}
-                                  onChange={handleImageSelect}
-                                  accept="image/*"
-                                  className="hidden"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => fileInputRef.current?.click()}
-                                  className="h-10 w-10 flex-shrink-0"
-                                >
-                                  <ImageIcon className="h-5 w-5" />
-                                </Button>
-                                <Button type="submit" disabled={!message.trim() && !selectedImage} className="h-10 px-4 flex-shrink-0">
-                                  <Send className="h-4 w-4" />
-                                </Button>
-                              </form>
-                              {selectedImage && (
+                              {isConsultationCompleted ? (
+                                <div className="text-center py-4">
+                                  <div className="bg-muted/50 rounded-lg p-4">
+                                    <p className="text-sm text-muted-foreground font-medium">
+                                      Konsultasi ini telah selesai dan tidak dapat dilanjutkan.
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Anda masih dapat melihat riwayat pesan, tetapi tidak dapat mengirim pesan baru.
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <form onSubmit={handleSendMessage} className="flex items-end space-x-2 w-full">
+                                  <Textarea
+                                    ref={textareaRef}
+                                    placeholder="Ketik pesan..."
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    className="flex-1 min-w-0 resize-none overflow-y-hidden"
+                                    rows={1}
+                                  />
+                                  <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageSelect}
+                                    accept="image/*"
+                                    className="hidden"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="h-10 w-10 flex-shrink-0"
+                                  >
+                                    <ImageIcon className="h-5 w-5" />
+                                  </Button>
+                                  <Button type="submit" disabled={!message.trim() && !selectedImage} className="h-10 px-4 flex-shrink-0">
+                                    <Send className="h-4 w-4" />
+                                  </Button>
+                                </form>
+                              )}
+                              {selectedImage && !isConsultationCompleted && (
                                 <div className="mt-2 relative inline-block">
                                   <img
                                     src={URL.createObjectURL(selectedImage)}

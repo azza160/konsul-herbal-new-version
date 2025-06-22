@@ -61,6 +61,8 @@ Route::middleware(['auth', 'check.role:pengguna'])->group(function () {
     Route::get('/konsultasi/{id}/pembayaran', [PenggunaController::class, 'PembayaranShow'])->name('pengguna-pembayaran');
     Route::post('/konsultasi/{id}/upload-bukti', [PenggunaController::class, 'UploadBuktiPembayaran'])->name('pengguna-upload-bukti');
     Route::get('/konsultasi/{id}/lihat-ewallet/{ewallet_id}', [PenggunaController::class, 'LihatEWallet'])->name('pengguna-lihat-ewallet');
+    Route::get('/riwayat-konsultasi', [PenggunaController::class, "RiwayatKonsultasiShow"])->name('riwayat-konsultasi');
+    Route::delete('/konsultasi/{id}', [PenggunaController::class, 'HapusKonsultasi'])->name('hapus-konsultasi');
 
     Route::get('/konsultasi/pesan', [PenggunaController::class, 'PesanShow'])->name('pengguna-pesan');
     Route::post('/konsultasi/pesan/kirim', [PenggunaController::class, 'KirimPesan'])->name('pesan.kirim');

@@ -251,21 +251,21 @@ export default function ExpertsPage() {
 
                                         {/* Action Buttons */}
                                         <div className="flex flex-col gap-2 sm:gap-3 pt-2 sm:pt-3">
-                                             <motion.div
-                                                 whileHover={{
-                                                     scale: 1.02,
-                                                 }}
-                                                 whileTap={{
-                                                     scale: 0.98,
-                                                 }}
-                                             >
+                                                    <motion.div
+                                                        whileHover={{
+                                                            scale: 1.02,
+                                                        }}
+                                                        whileTap={{
+                                                            scale: 0.98,
+                                                        }}
+                                                    >
                                                  <Button asChild className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 group-hover:shadow-xl transition-all duration-300 text-xs sm:text-sm md:text-base py-2 sm:py-3">
                                                      <Link href={route("detail-ahli-herbal", { id: expert.id })}>
-                                                         <Eye className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-2" />
-                                                         Lihat Detail
+                                                            <Eye className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-2" />
+                                                            Lihat Detail
                                                      </Link>
-                                                 </Button>
-                                             </motion.div>
+                                                        </Button>
+                                                    </motion.div>
                                         </div>
                                     </CardContent>
                                 </Card>
