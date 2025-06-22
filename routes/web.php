@@ -58,6 +58,9 @@ Route::middleware(['auth', 'check.role:pengguna'])->group(function () {
     Route::post('/profile/update-password', [PenggunaController::class, "UpdatePassword"])->name('update-password');
 
     Route::post('/konsultasi', [PenggunaController::class, 'BuatKonsultasi'])->name('pengguna-konsultasi');
+    Route::get('/konsultasi/{id}/pembayaran', [PenggunaController::class, 'PembayaranShow'])->name('pengguna-pembayaran');
+    Route::post('/konsultasi/{id}/upload-bukti', [PenggunaController::class, 'UploadBuktiPembayaran'])->name('pengguna-upload-bukti');
+    Route::get('/konsultasi/{id}/lihat-ewallet/{ewallet_id}', [PenggunaController::class, 'LihatEWallet'])->name('pengguna-lihat-ewallet');
 
     Route::get('/konsultasi/pesan', [PenggunaController::class, 'PesanShow'])->name('pengguna-pesan');
     Route::post('/konsultasi/pesan/kirim', [PenggunaController::class, 'KirimPesan'])->name('pesan.kirim');

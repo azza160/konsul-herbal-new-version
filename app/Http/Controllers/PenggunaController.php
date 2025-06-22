@@ -17,6 +17,8 @@ use Inertia\Inertia;
 use Illuminate\Support\Str;
 use App\Models\Notification;
 use Illuminate\Support\Carbon;
+use App\Models\EWalletView;
+use App\Models\EWallet;
 
 class PenggunaController extends Controller
 {
@@ -327,7 +329,8 @@ public function updateProfile(Request $request)
         $validated['foto'] = '/storage/' . $fotoPath;
     }
 
-    $user->update($validated);
+    $user->fill($validated);
+    $user->save();
 
     return redirect()->back()->with('success', 'Profil berhasil diperbarui.');
 }
@@ -442,7 +445,7 @@ public function BuatKonsultasi(Request $request){
         'related_id' => $konsultasi->id,
     ]);
 
-    return redirect()->back()->with('success', 'Permintaan konsultasi berhasil dikirim. Silakan lakukan pembayaran.');
+    return redirect()->route('pengguna-pembayaran', $konsultasi->id)->with('success', 'Permintaan konsultasi berhasil dikirim. Silakan lakukan pembayaran.');
 }
 
 public function getLatestMessages(Request $request)
@@ -557,6 +560,185 @@ public function DetailAhliHerbalShow($id)
         'user' => $user,
         'expert' => $expertData,
     ]);
+}
+
+public function PembayaranShow($id)
+{
+    $user = Auth::user();
+    $konsultasi = Konsultasi::with(['ahli.eWallets'])->findOrFail($id);
+    
+    // Verify user owns this consultation
+    if ($konsultasi->pengguna_id !== $user->id) {
+        abort(403);
+    }
+    
+    // Verify consultation status is waiting for payment
+    if ($konsultasi->status !== 'menunggu_pembayaran') {
+        return redirect()->back()->with('error', 'Status konsultasi tidak valid untuk pembayaran.');
+    }
+
+    $expert = $konsultasi->ahli;
+    $eWallets = $expert->eWallets->map(function ($eWallet) use ($user, $konsultasi) {
+        // Get view count for this specific combination
+        $viewRecord = EWalletView::where([
+            'user_id' => $user->id,
+            'e_wallet_id' => $eWallet->id,
+            'konsultasi_id' => $konsultasi->id,
+        ])->first();
+        
+        return [
+            'id' => $eWallet->id,
+            'nama_e_wallet' => $eWallet->nama_e_wallet,
+            'view_count' => $viewRecord ? $viewRecord->view_count : 0,
+            'can_view' => $viewRecord ? $viewRecord->view_count < 3 : true,
+        ];
+    });
+
+    return Inertia::render('pengguna/Pembayaran', [
+        'user' => $user,
+        'konsultasi' => [
+            'id' => $konsultasi->id,
+            'keluhan' => $konsultasi->keluhan,
+            'jenis' => $konsultasi->jenis,
+            'tanggal_konsultasi' => $konsultasi->tanggal_konsultasi,
+            'jam_konsultasi' => $konsultasi->jam_konsultasi,
+            'status' => $konsultasi->status,
+        ],
+        'expert' => [
+            'id' => $expert->id,
+            'nama' => $expert->nama,
+            'foto' => $expert->foto,
+            'harga_konsultasi_online' => $expert->harga_konsultasi_online,
+            'harga_konsultasi_offline' => $expert->harga_konsultasi_offline,
+        ],
+        'eWallets' => $eWallets,
+    ]);
+}
+
+public function LihatEWallet($konsultasiId, $ewalletId)
+{
+    try {
+        $user = Auth::user();
+        $konsultasi = Konsultasi::findOrFail($konsultasiId);
+        $eWallet = EWallet::findOrFail($ewalletId);
+        
+        // Verify user owns this consultation
+        if ($konsultasi->pengguna_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized access to consultation'], 403);
+        }
+        
+        // Verify e-wallet belongs to the expert
+        if ($eWallet->user_id !== $konsultasi->ahli_id) {
+            return response()->json(['error' => 'E-wallet does not belong to the expert'], 403);
+        }
+        
+        // Check view count BEFORE incrementing
+        $viewRecord = EWalletView::where([
+            'user_id' => $user->id,
+            'e_wallet_id' => $eWallet->id,
+            'konsultasi_id' => $konsultasi->id,
+        ])->first();
+        
+        $currentViewCount = $viewRecord ? $viewRecord->view_count : 0;
+        
+        // Check if already at limit (3 views)
+        if ($currentViewCount >= 3) {
+            return response()->json([
+                'error' => 'Anda telah melihat detail e-wallet ini sebanyak 3 kali. Tindakan ini dianggap sebagai spam.',
+                'can_view' => false,
+                'view_count' => $currentViewCount
+            ], 429);
+        }
+        
+        // Update or create view record
+        if ($viewRecord) {
+            $viewRecord->update([
+                'view_count' => $currentViewCount + 1,
+                'last_viewed_at' => now(),
+            ]);
+            // Refresh the record to get updated data
+            $viewRecord->refresh();
+        } else {
+            $viewRecord = EWalletView::create([
+                'user_id' => $user->id,
+                'e_wallet_id' => $eWallet->id,
+                'konsultasi_id' => $konsultasi->id,
+                'view_count' => 1,
+                'last_viewed_at' => now(),
+            ]);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'e_wallet' => [
+                'id' => $eWallet->id,
+                'nama_e_wallet' => $eWallet->nama_e_wallet,
+                'nomor_e_wallet' => $eWallet->nomor_e_wallet,
+            ],
+            'view_count' => $viewRecord->view_count,
+            'can_view' => $viewRecord->view_count < 3
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error in LihatEWallet: ' . $e->getMessage());
+        return response()->json(['error' => 'Terjadi kesalahan server'], 500);
+    }
+}
+
+public function UploadBuktiPembayaran(Request $request, $id)
+{
+    $request->validate([
+        'foto_bukti_pembayaran' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+    ]);
+
+    $user = Auth::user();
+    $konsultasi = Konsultasi::findOrFail($id);
+    
+    // Verify user owns this consultation
+    if ($konsultasi->pengguna_id !== $user->id) {
+        abort(403);
+    }
+    
+    // Verify consultation status is waiting for payment
+    if ($konsultasi->status !== 'menunggu_pembayaran') {
+        return redirect()->back()->with('error', 'Status konsultasi tidak valid untuk upload pembayaran.');
+    }
+
+    try {
+        // Upload image
+        $imagePath = $request->file('foto_bukti_pembayaran')->store('bukti-pembayaran', 'public');
+        
+        // Update consultation
+        $konsultasi->update([
+            'foto_bukti_pembayaran' => $imagePath,
+            'status' => 'menunggu_konfirmasi',
+        ]);
+
+        // Create notification for expert
+        Notification::create([
+            'user_id' => $konsultasi->ahli_id,
+            'type' => 'payment_uploaded',
+            'title' => 'Bukti Pembayaran Diunggah',
+            'message' => "{$user->nama} telah mengunggah bukti pembayaran untuk konsultasi.",
+            'related_id' => $konsultasi->id,
+            'is_read' => false,
+        ]);
+
+        // Create notification for user
+        Notification::create([
+            'user_id' => $user->id,
+            'type' => 'payment_uploaded',
+            'title' => 'Bukti Pembayaran Berhasil',
+            'message' => 'Bukti pembayaran Anda telah berhasil diunggah. Menunggu konfirmasi dari ahli.',
+            'related_id' => $konsultasi->id,
+            'is_read' => false,
+        ]);
+
+        return redirect()->route('detail-ahli-herbal', $konsultasi->ahli_id)
+            ->with('success', 'Bukti pembayaran berhasil diunggah. Menunggu konfirmasi dari ahli.');
+    } catch (\Exception $e) {
+        Log::error('Error uploading payment proof: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Gagal mengunggah bukti pembayaran. Silakan coba lagi.');
+    }
 }
 
 }
