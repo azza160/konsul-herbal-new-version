@@ -194,7 +194,9 @@ export default function RiwayatKonsultasi() {
     
     return (
         <>
+             <div classname="fixed z-[9999999]">
             <AlertContainer />
+            </div>
             <Head title="Riwayat Konsultasi" />
             <div className="flex flex-col min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50">
                 <Header />
