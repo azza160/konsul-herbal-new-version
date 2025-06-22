@@ -132,6 +132,14 @@ export default function RiwayatKonsultasi() {
         { label: "Riwayat Konsultasi" },
     ];
 
+    const handleDownload = (consultationId) => {
+        const downloadUrl = route("konsultasi.download", consultationId);
+        window.open(downloadUrl, '_blank');
+        setTimeout(() => {
+            showSuccess("Unduhan Dimulai", "Bukti konsultasi Anda sedang diproses.");
+        }, 500);
+    };
+
     const handleDelete = (consultation) => {
         setConfirmDeleteModal({ open: true, consultation });
     };
@@ -172,8 +180,10 @@ export default function RiwayatKonsultasi() {
             case "diterima":
                 if (consultation.jenis === 'konsultasi_online') {
                     return <Button {...buttonProps} className="w-full" asChild><Link href={route('pengguna-pesan')}><MessageSquare className="h-4 w-4 mr-2" /> Mulai Konsultasi</Link></Button>;
+                } else if (consultation.jenis === 'konsultasi_offline') {
+                    return <Button {...buttonProps} className="w-full" onClick={() => handleDownload(consultation.id)}><Download className="h-4 w-4 mr-2" /> Download Bukti</Button>;
                 }
-                return <Button {...buttonProps} className="w-full" onClick={() => console.log('Download offline details')}><Download className="h-4 w-4 mr-2" /> Download</Button>;
+                return null;
             case "selesai":
             case "ditolak":
                 return <Button {...buttonProps} variant="destructive" className="w-full" onClick={() => handleDelete(consultation)}><Trash2 className="h-4 w-4 mr-2" /> Hapus</Button>;

@@ -19,6 +19,7 @@ use App\Models\Notification;
 use Illuminate\Support\Carbon;
 use App\Models\EWalletView;
 use App\Models\EWallet;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PenggunaController extends Controller
 {
@@ -739,6 +740,32 @@ public function UploadBuktiPembayaran(Request $request, $id)
         Log::error('Error uploading payment proof: ' . $e->getMessage());
         return redirect()->back()->with('error', 'Gagal mengunggah bukti pembayaran. Silakan coba lagi.');
     }
+}
+
+public function DownloadBuktiKonsultasi($id)
+{
+    $user = Auth::user();
+    $konsultasi = Konsultasi::with(['pengguna', 'ahli.ahli', 'ahli.lokasi'])->findOrFail($id);
+
+    // Authorization
+    if ($konsultasi->pengguna_id !== $user->id || $konsultasi->jenis !== 'konsultasi_offline' || $konsultasi->status !== 'diterima') {
+        abort(403, 'Aksi tidak diizinkan.');
+    }
+
+    // Create notification
+    Notification::create([
+        'user_id' => $user->id,
+        'type' => 'consultation_proof_downloaded',
+        'title' => 'Bukti Konsultasi Diunduh',
+        'message' => 'Anda telah berhasil mengunduh bukti untuk konsultasi dengan ID: ' . $konsultasi->id,
+        'related_id' => $konsultasi->id,
+        'is_read' => false,
+    ]);
+
+    $pdf = Pdf::loadView('pdf.konsultasi', ['konsultasi' => $konsultasi]);
+    $fileName = 'bukti-konsultasi-' . $user->nama . '-' . $konsultasi->id . '.pdf';
+    
+    return $pdf->download($fileName);
 }
 
 public function RiwayatKonsultasiShow()

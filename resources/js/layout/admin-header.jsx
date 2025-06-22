@@ -116,7 +116,7 @@ export function AdminHeader() {
                                 transition={{ duration: 0.5 }}
                             ></motion.div>
                             <span className="text-xl font-bold text-primary hidden md:inline-block">
-                                HerbalCare Admin
+                                HerbalCare 
                             </span>
                             <div className="ml-[50px] md:hidden">
                                 <span className="text-xl font-bold text-primary ">
